@@ -1,0 +1,301 @@
+<!doctype html>
+
+<html lang="en">
+    <title> Add </title>
+    <meta charset="utf-8"/>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="icon" href="../../../../favicon.ico">
+    {% load staticfiles %}
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" type='text/css' href="{% static 'css/bootstrap.min.css' %}">
+<head>
+    <style>
+        body {
+          padding-top: 3.5rem;
+        }
+    </style>
+</head> 
+<body class = " bg-light ">
+
+{% include "catalog/navbar.html" %}
+
+<!-- Submit modal -->
+<div class="modal fade" id="alert" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLongTitle">Success!</h5>
+      </div>
+      <div class="modal-body">
+      </div>
+      <div class="modal-footer">
+        <a href= "{% url 'index' %}" class="btn btn-primary" role="button">Catalog</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Main container -->
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-5 order-md-2 mb-5">
+            <h4 class="d-flex justify-content-between align-items-center">
+                <span class="text-muted">Items Selected</span>
+            </h4>
+            <ul class="list-group mb-3" id="selected-items">
+            </ul>
+            <button type="submit" id="submit" class="btn btn-primary btn-block"> Submit </button>
+        </div>
+        <div class="col-md-7 order-md-1">
+            <h4 class="mb-3">Select an Item to {{ message }} the catalog</h4>
+            <div class="form-group">
+                <form class = "my-ajax-form" method="POST" autocomplete="off">
+                    {% csrf_token %}
+                    {{ form.as_p }}
+                </form>
+            </div>
+            <div class="list-group-item" id="search-results">
+                <!-- Django template -->
+                {% block content %}
+
+                {% endblock %}
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- jQuery -->
+<script src= "{% static 'jquery-3.3.1.js' %}" ></script>
+
+<!-- Bootstrap js -->
+<script src= "{% static 'js/bootstrap.min.js' %}"></script>
+
+{% block javascript %}
+
+
+<script>
+
+function getCookie(name) {
+    var cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+            var cookie = jQuery.trim(cookies[i]);
+            // Does this cookie string begin with the name we want?
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+var csrftoken = getCookie('csrftoken');
+
+function csrfSafeMethod(method) {
+    // these HTTP methods do not require CSRF protection
+    return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+}
+$.ajaxSetup({
+    beforeSend: function(xhr, settings) {
+        if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+            xhr.setRequestHeader("X-CSRFToken", csrftoken);
+        }
+    }
+});
+
+
+
+</script>
+
+
+<script>
+    $("#id_search").keyup(function () {
+      var query = $(this).val();
+
+        if(query==""){
+        $("#search-results").html("")
+        return;
+        }
+
+        $.ajax({
+            url: "{% url 'search' %}"   ,
+            type: "POST",
+            data: {
+              'query': query
+            },
+            dataType: 'text',
+
+            success: function (data) {
+                console.log(data);
+                $("#search-results").html(data)
+            },
+
+        });
+
+    });
+</script>
+
+
+<script>
+
+        $("#search-results").on('click', 'button', function() {
+            var selection = $(this).children('div').text();
+            var id = $(this).attr("id");
+            var flag_append = 1;
+            var quantity = 1;
+            var listItems = $("#selected-items li");
+
+            listItems.each(function(idx, li) {
+                var product = $(li);
+
+                if(product.find("small").eq(1).text().endsWith(id)){
+
+                    var quantity = parseInt(product.children("span").eq(0).text())
+
+                    if (quantity >= 100){
+                        flag_append = 0;
+                        return false
+                    } // if quantity is at max
+
+                    else {
+                    quantity++
+
+                    product.children("span").eq(0).html(quantity)
+
+                    flag_append = 0;
+
+                    return false;
+                    } //otherwise increment
+                }
+                // and the rest of your code
+            });
+
+            if(flag_append == 1){
+
+
+            $("#selected-items").append('<li class="list-group-item d-flex justify-content-between lh-condensed">' +
+                                            '<div class="mr-auto">' +
+                                                 '<h6 class=" mr-2 my-0">' + selection + '</h6>' +
+                                                '<small class="text-muted">' + 'Code: </small>' +
+                                                '<small class="text-muted">' + id + '</small>' +
+                                            '</div>' +
+                                            '<span class="text-muted ml-2 mr-2">' + quantity + '</span>' +
+                                            '<div class="ml-2">' +
+                                                '<button type="button" class="btn btn-secondary btn-block">+</button>' +
+                                                '<button type="button" class="btn btn-secondary btn-block">-</button>' +
+                                            '</div>' +
+                                        '</li>')
+            }
+
+            //console.log(selection);
+
+        });
+
+</script>
+
+<script>
+
+        $("#submit").on('click', function() {
+            var selectedItems = {}
+            var listItems = $("#selected-items li");
+
+            if (listItems.length == 0){
+
+                alert("Please select items.");
+                return
+                
+            }
+
+            listItems.each(function(idx, li) {
+                var product = $(li);
+                var code = product.find("small").eq(1).text()
+                var quantity = parseInt(product.children("span").eq(0).text())
+                selectedItems[code] = quantity
+            }); //iterate over selected items list
+
+            var ajaxUrl = ''
+
+            if (window.location.pathname ==  '/add/'){
+                ajaxUrl = "{% url 'updateAdd' %}"
+            }
+            else{
+                ajaxUrl = "{% url 'updateTake' %}"
+            }
+
+            $.ajax({
+                url: ajaxUrl,
+                type: "POST",
+                data : selectedItems,
+                dataType: 'text',
+
+                success: function (selectedItems) {
+
+                    console.log(selectedItems)
+                    
+                    $('#alert').modal({
+                        backdrop: 'static',
+                        keyboard: false
+                    });    
+                },
+
+                error: function (XMLHttpRequest, textStatus, errorThrown) {
+                    alert("Status: " + textStatus); alert("Error: " + errorThrown);
+                    alert("Status: " + XMLHttpRequest);              
+                },
+            });
+        });
+
+    $('#alert').on('show.bs.modal', function (event) {
+        if (window.location.pathname ==  '/add/'){
+            message = "You have successfully added new items!"
+        }
+        else{
+            message = "You have successfully checked out items!"
+        }
+        var modal = $(this)
+        modal.find('.modal-body').text(message)
+    })
+
+</script>
+
+<script>
+        $("#selected-items").on('click', 'button', function() {
+            var sign = $(this).text()
+            var span = $(this).parent().siblings("span")
+            var quantity = parseInt(span.text())
+
+            if ((sign == '-') & (quantity <= 1)){
+                span.parent("li").remove()
+            }
+
+            else if ((sign == '-') & (quantity > 1)){
+                quantity--
+                span.html(quantity)
+            }
+
+            else if ((sign == '+' & (quantity < 100))){
+                quantity++
+                span.html(quantity)
+            }
+
+            else if ((sign == '+') & (quantity >= 100)){
+                alert('No more than 100 items per order')
+            }
+        });
+
+</script>
+
+
+
+  
+
+{% endblock %}
+
+</body>
+</html>

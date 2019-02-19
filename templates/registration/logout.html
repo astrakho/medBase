@@ -1,0 +1,24 @@
+<!doctype html>
+
+<html lang="en">
+    <title> Catalog </title>
+    <meta charset="utf-8"/>
+    {% load staticfiles %}
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+<head> 
+
+</head> 
+
+
+<body>
+	
+{% block content %}
+  <p>Logged out!</p>  
+  <a href="{% url 'login'%}">Click here to login again.</a>
+{% endblock %}
+
+</body>
+
+</html>

@@ -1,0 +1,1 @@
+web: gunicorn medbase.wsgi --log-file -
